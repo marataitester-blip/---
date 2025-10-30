@@ -1,11 +1,20 @@
 import { GoogleGenAI, Type, Modality, Content } from "@google/genai";
 import { PsychologicalApproach } from '../types';
 
-if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set");
-}
+// Helper function to get the AI client, handling the missing API key case.
+const getAiClient = (): GoogleGenAI | null => {
+    if (!process.env.API_KEY) {
+        console.error("API_KEY environment variable not set");
+        return null;
+    }
+    try {
+        return new GoogleGenAI({ apiKey: process.env.API_KEY });
+    } catch (error) {
+        console.error("Error initializing GoogleGenAI:", error);
+        return null;
+    }
+};
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const responseSchema = {
     type: Type.OBJECT,
@@ -43,6 +52,14 @@ const summarySystemInstruction = `You are a helpful assistant. Analyze the follo
 - Respond ONLY with the numbered list of recommendations. Do not add any introductory or concluding text.`;
 
 export async function getChatResponse(history: Content[], newMessage: string): Promise<{ response: string; approach: PsychologicalApproach }> {
+    const ai = getAiClient();
+    if (!ai) {
+        return {
+            response: "Ошибка конфигурации: Ключ API не найден. Убедитесь, что переменная окружения API_KEY установлена правильно.",
+            approach: PsychologicalApproach.Unknown
+        };
+    }
+
     try {
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
@@ -79,6 +96,9 @@ export async function getChatResponse(history: Content[], newMessage: string): P
 }
 
 export async function getSpeech(text: string): Promise<string | null> {
+    const ai = getAiClient();
+    if (!ai) return null;
+    
     try {
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash-preview-tts",
@@ -101,6 +121,11 @@ export async function getSpeech(text: string): Promise<string | null> {
 }
 
 export async function getSummary(history: Content[]): Promise<string> {
+    const ai = getAiClient();
+    if (!ai) {
+        return "Не удалось сформировать рекомендации: Ключ API не настроен.";
+    }
+
     try {
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
