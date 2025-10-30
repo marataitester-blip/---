@@ -1,0 +1,5 @@
+{
+  "name": "Electronic Psychologist Chat",
+  "description": "A conversational AI application that acts as a supportive electronic psychologist, providing responses based on various therapeutic approaches and offering text-to-speech for accessibility.",
+  "requestFramePermissions": []
+}
