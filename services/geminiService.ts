@@ -1,14 +1,28 @@
 import { GoogleGenAI, Type, Modality, Content } from "@google/genai";
 import { PsychologicalApproach } from '../types';
 
-// Helper function to get the AI client, handling the missing API key case.
+// Create a single, lazily-initialized client instance.
+let geminiClient: GoogleGenAI | null = null;
+
+// Helper function to get the AI client. It initializes the client on the first call
+// and returns the cached instance on subsequent calls.
 const getAiClient = (): GoogleGenAI | null => {
+    // If the instance already exists, return it.
+    if (geminiClient) {
+        return geminiClient;
+    }
+
+    // If the API key is not available, log an error and return null.
+    // The calling function will handle this and show an error to the user.
     if (!process.env.API_KEY) {
-        console.error("API_KEY environment variable not set");
+        console.error("API_KEY environment variable not set. Cannot initialize GoogleGenAI client.");
         return null;
     }
+
+    // Try to create and cache the instance.
     try {
-        return new GoogleGenAI({ apiKey: process.env.API_KEY });
+        geminiClient = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        return geminiClient;
     } catch (error) {
         console.error("Error initializing GoogleGenAI:", error);
         return null;
