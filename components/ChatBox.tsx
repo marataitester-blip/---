@@ -1,16 +1,17 @@
-
 import React, { useEffect, useRef } from 'react';
 import { Message } from '../types';
 import MessageBubble from './MessageBubble';
+import SummaryMessageBubble from './SummaryMessageBubble';
 
 interface ChatBoxProps {
     messages: Message[];
     isLoading: boolean;
     isPlaying: string | null;
     onPlaySound: (text: string, messageId: string) => void;
+    onNewChat: () => void;
 }
 
-const ChatBox: React.FC<ChatBoxProps> = ({ messages, isLoading, isPlaying, onPlaySound }) => {
+const ChatBox: React.FC<ChatBoxProps> = ({ messages, isLoading, isPlaying, onPlaySound, onNewChat }) => {
     const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -19,9 +20,15 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, isLoading, isPlaying, onPla
 
     return (
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            {messages.map((msg) => (
-                <MessageBubble key={msg.id} message={msg} isPlaying={isPlaying === msg.id} onPlaySound={onPlaySound} />
-            ))}
+            {messages.map((msg) => {
+                if (msg.type === 'summary') {
+                    return <SummaryMessageBubble key={msg.id} summaryText={msg.text} onNewChat={onNewChat} />;
+                }
+                if (msg.type === 'chat') {
+                    return <MessageBubble key={msg.id} message={msg} isPlaying={isPlaying === msg.id} onPlaySound={onPlaySound} />;
+                }
+                return null;
+            })}
             {isLoading && (
                 <div className="flex justify-start">
                     <div className="bg-gray-200 text-gray-800 rounded-2xl rounded-bl-lg p-3 max-w-xs animate-pulse">

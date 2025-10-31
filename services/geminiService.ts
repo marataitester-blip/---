@@ -1,26 +1,46 @@
 import { GoogleGenAI, Type, Modality, Content } from "@google/genai";
 import { PsychologicalApproach } from '../types';
 
+const API_KEY_STORAGE_KEY = 'GEMINI_API_KEY';
 let genAIClient: GoogleGenAI | null = null;
 
 /**
  * Lazily initializes and returns a singleton instance of the GoogleGenAI client.
- * This ensures that the API key is read from the environment on the first API call
- * and the same client instance is reused for subsequent calls.
+ * Implements the user's request to use localStorage for API key persistence
+ * to ensure availability across the app session, adapted for the SPA architecture.
  * @returns {GoogleGenAI} The initialized GoogleGenAI client.
- * @throws {Error} If the API_KEY environment variable is not set.
+ * @throws {Error} If the API_KEY cannot be found.
  */
 function getAiClient(): GoogleGenAI {
     if (genAIClient) {
+        // Return the existing client if already initialized.
         return genAIClient;
     }
 
-    const apiKey = process.env.API_KEY;
+    let apiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+
     if (!apiKey) {
-        console.error("API_KEY environment variable not set.");
-        throw new Error("Ошибка конфигурации: Ключ API не найден. Убедитесь, что переменная окружения API_KEY установлена правильно.");
+        // If key is not in localStorage, try to get it from environment variables.
+        // This should happen on the first load.
+        apiKey = process.env.API_KEY;
+
+        if (apiKey) {
+            // Store the key from the environment into localStorage for persistence.
+            localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
+            console.log('✅ API KEY has been saved to localStorage');
+        }
+    } else {
+        console.log('✅ API KEY loaded from localStorage');
+    }
+
+    if (!apiKey || !apiKey.startsWith('AIza')) {
+        console.error('❌ ERROR: API KEY not found or invalid in environment and localStorage. It must start with "AIza".');
+        // Clear any invalid key from storage
+        localStorage.removeItem(API_KEY_STORAGE_KEY);
+        throw new Error("Ошибка конфигурации: Ключ API не найден или некорректен. Убедитесь, что переменная окружения API_KEY установлена правильно.");
     }
     
+    console.log('✅ API_KEY initialized:', apiKey.substring(0, 15) + '...');
     genAIClient = new GoogleGenAI({ apiKey });
     return genAIClient;
 }

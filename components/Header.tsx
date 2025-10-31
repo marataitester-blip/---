@@ -3,9 +3,10 @@ import React from 'react';
 interface HeaderProps {
     onEndChat?: () => void;
     isSummarizing?: boolean;
+    isSessionEnded?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ onEndChat, isSummarizing }) => {
+const Header: React.FC<HeaderProps> = ({ onEndChat, isSummarizing, isSessionEnded }) => {
     return (
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-5 rounded-t-2xl text-center shadow-md flex justify-between items-center">
             <div className="text-left">
@@ -15,8 +16,8 @@ const Header: React.FC<HeaderProps> = ({ onEndChat, isSummarizing }) => {
             {onEndChat && (
                 <button
                     onClick={onEndChat}
-                    disabled={isSummarizing}
-                    className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-red-400 disabled:cursor-wait"
+                    disabled={isSummarizing || isSessionEnded}
+                    className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-red-400 disabled:opacity-75 disabled:cursor-not-allowed"
                 >
                     {isSummarizing ? 'Создание...' : 'Завершить диалог'}
                 </button>

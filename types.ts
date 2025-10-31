@@ -1,4 +1,3 @@
-
 export enum Sender {
     User = 'user',
     Bot = 'bot'
@@ -18,4 +17,5 @@ export interface Message {
     text: string;
     sender: Sender;
     approach?: PsychologicalApproach;
+    type?: 'chat' | 'summary';
 }
