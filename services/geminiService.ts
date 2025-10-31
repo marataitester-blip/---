@@ -1,35 +1,6 @@
 import { GoogleGenAI, Type, Modality, Content } from "@google/genai";
 import { PsychologicalApproach } from '../types';
 
-// Create a single, lazily-initialized client instance.
-let geminiClient: GoogleGenAI | null = null;
-
-// Helper function to get the AI client. It initializes the client on the first call
-// and returns the cached instance on subsequent calls.
-const getAiClient = (): GoogleGenAI | null => {
-    // If the instance already exists, return it.
-    if (geminiClient) {
-        return geminiClient;
-    }
-
-    // If the API key is not available, log an error and return null.
-    // The calling function will handle this and show an error to the user.
-    if (!process.env.API_KEY) {
-        console.error("API_KEY environment variable not set. Cannot initialize GoogleGenAI client.");
-        return null;
-    }
-
-    // Try to create and cache the instance.
-    try {
-        geminiClient = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        return geminiClient;
-    } catch (error) {
-        console.error("Error initializing GoogleGenAI:", error);
-        return null;
-    }
-};
-
-
 const responseSchema = {
     type: Type.OBJECT,
     properties: {
@@ -66,8 +37,8 @@ const summarySystemInstruction = `You are a helpful assistant. Analyze the follo
 - Respond ONLY with the numbered list of recommendations. Do not add any introductory or concluding text.`;
 
 export async function getChatResponse(history: Content[], newMessage: string): Promise<{ response: string; approach: PsychologicalApproach }> {
-    const ai = getAiClient();
-    if (!ai) {
+    if (!process.env.API_KEY) {
+        console.error("API_KEY environment variable not set.");
         return {
             response: "Ошибка конфигурации: Ключ API не найден. Убедитесь, что переменная окружения API_KEY установлена правильно.",
             approach: PsychologicalApproach.Unknown
@@ -75,6 +46,7 @@ export async function getChatResponse(history: Content[], newMessage: string): P
     }
 
     try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: [...history, { role: 'user', parts: [{ text: newMessage }] }],
@@ -110,10 +82,13 @@ export async function getChatResponse(history: Content[], newMessage: string): P
 }
 
 export async function getSpeech(text: string): Promise<string | null> {
-    const ai = getAiClient();
-    if (!ai) return null;
+    if (!process.env.API_KEY) {
+        console.error("API_KEY environment variable not set.");
+        return null;
+    }
     
     try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash-preview-tts",
             contents: [{ parts: [{ text: text }] }],
@@ -135,12 +110,13 @@ export async function getSpeech(text: string): Promise<string | null> {
 }
 
 export async function getSummary(history: Content[]): Promise<string> {
-    const ai = getAiClient();
-    if (!ai) {
+    if (!process.env.API_KEY) {
+        console.error("API_KEY environment variable not set.");
         return "Не удалось сформировать рекомендации: Ключ API не настроен.";
     }
 
     try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: history,
