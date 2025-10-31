@@ -1,6 +1,31 @@
 import { GoogleGenAI, Type, Modality, Content } from "@google/genai";
 import { PsychologicalApproach } from '../types';
 
+let genAIClient: GoogleGenAI | null = null;
+
+/**
+ * Lazily initializes and returns a singleton instance of the GoogleGenAI client.
+ * This ensures that the API key is read from the environment on the first API call
+ * and the same client instance is reused for subsequent calls.
+ * @returns {GoogleGenAI} The initialized GoogleGenAI client.
+ * @throws {Error} If the API_KEY environment variable is not set.
+ */
+function getAiClient(): GoogleGenAI {
+    if (genAIClient) {
+        return genAIClient;
+    }
+
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+        console.error("API_KEY environment variable not set.");
+        throw new Error("Ошибка конфигурации: Ключ API не найден. Убедитесь, что переменная окружения API_KEY установлена правильно.");
+    }
+    
+    genAIClient = new GoogleGenAI({ apiKey });
+    return genAIClient;
+}
+
+
 const responseSchema = {
     type: Type.OBJECT,
     properties: {
@@ -37,16 +62,8 @@ const summarySystemInstruction = `You are a helpful assistant. Analyze the follo
 - Respond ONLY with the numbered list of recommendations. Do not add any introductory or concluding text.`;
 
 export async function getChatResponse(history: Content[], newMessage: string): Promise<{ response: string; approach: PsychologicalApproach }> {
-    if (!process.env.API_KEY) {
-        console.error("API_KEY environment variable not set.");
-        return {
-            response: "Ошибка конфигурации: Ключ API не найден. Убедитесь, что переменная окружения API_KEY установлена правильно.",
-            approach: PsychologicalApproach.Unknown
-        };
-    }
-
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = getAiClient();
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: [...history, { role: 'user', parts: [{ text: newMessage }] }],
@@ -73,22 +90,19 @@ export async function getChatResponse(history: Content[], newMessage: string): P
 
     } catch (error) {
         console.error("Error in getChatResponse:", error);
-        // Fallback response
+        const errorMessage = error instanceof Error 
+            ? error.message 
+            : "К сожалению, у меня возникла внутренняя ошибка. Давайте попробуем поговорить об этом позже.";
         return {
-            response: "К сожалению, у меня возникла внутренняя ошибка. Давайте попробуем поговорить об этом позже.",
+            response: errorMessage,
             approach: PsychologicalApproach.Unknown
         };
     }
 }
 
 export async function getSpeech(text: string): Promise<string | null> {
-    if (!process.env.API_KEY) {
-        console.error("API_KEY environment variable not set.");
-        return null;
-    }
-    
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = getAiClient();
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash-preview-tts",
             contents: [{ parts: [{ text: text }] }],
@@ -110,13 +124,8 @@ export async function getSpeech(text: string): Promise<string | null> {
 }
 
 export async function getSummary(history: Content[]): Promise<string> {
-    if (!process.env.API_KEY) {
-        console.error("API_KEY environment variable not set.");
-        return "Не удалось сформировать рекомендации: Ключ API не настроен.";
-    }
-
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = getAiClient();
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: history,
@@ -128,6 +137,9 @@ export async function getSummary(history: Content[]): Promise<string> {
         return response.text.trim();
     } catch (error) {
         console.error("Error in getSummary:", error);
+        if (error instanceof Error && error.message.includes("Ключ API не найден")) {
+            return `Не удалось сформировать рекомендации: ${error.message}`;
+        }
         return "Не удалось сформировать рекомендации. Пожалуйста, попробуйте завершить диалог еще раз немного позже.";
     }
 }
